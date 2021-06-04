@@ -1,0 +1,11 @@
+body {
+	margin: 10px;
+	padding: 20px;
+	background-color: #cccccc;
+	height: 500;
+    background-image: url("background2.jpg");
+    background-position: center;
+    background-repeat: no-repeat; 
+    background-size: cover;
+    background-attachment: fixed;
+}
