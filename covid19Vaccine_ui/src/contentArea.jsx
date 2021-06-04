@@ -40,8 +40,13 @@ const ContentArea = () => {
             })
             .catch(
                 (err) => {
-                    setIsNotified(false);
-                    setIsExist(true);
+                    console.log(err);
+                    if (err == "Error: Network Error") {
+                        alert("Server is not running!!");
+                    } else {
+                        setIsNotified(false);
+                        setIsExist(true);
+                    }
                 }
             );
     }
