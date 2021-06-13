@@ -46,6 +46,8 @@ const ContentArea = () => {
                     } else {
                         setIsNotified(false);
                         setIsExist(true);
+                        setEmailLocal(email);
+                        setPincodeLocal(pinCode);
                     }
                 }
             );
@@ -85,7 +87,7 @@ const ContentArea = () => {
                                     name="email"
                                     id="email"
                                     placeholder="Email..."
-                                    value={email}
+                                    value={email.trim()}
                                     onChange={(e) => setEmail(e.target.value)}
                                     style={{ width: 400, color: "blue" }}>
                                 </input>

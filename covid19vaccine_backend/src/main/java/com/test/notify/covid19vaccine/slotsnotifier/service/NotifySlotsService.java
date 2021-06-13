@@ -46,11 +46,9 @@ class NotifySlotsService {
 
   private String toPin;
 
-  @Async
+  @Async("asyncExecutor")
   public
   CompletableFuture<String> getResult(String email, String pinCode, int age) {
-    System.out.println("Started looking for available slots at Pin Code " + pinCode + " .....");
-
     toPin = pinCode;
 
     HttpHeaders headers = new HttpHeaders();
@@ -75,6 +73,7 @@ class NotifySlotsService {
   void getSlot(HttpEntity<String> entity, String url, String email, int age) {
     Runnable runnable = () -> {
       boolean isEmailSent = false;
+      int round = 0;
       while (true) {
         RestTemplate rt = new RestTemplate();
         ResponseEntity<String> res = rt.exchange(url, HttpMethod.GET, entity, String.class);
@@ -82,13 +81,12 @@ class NotifySlotsService {
         int availableDoses1;
         int availableDoses2;
         try {
-          if (null != res) {
+          if (null != res && null != res.getBody()) {
             VaccineSlotsResponseEntity centers =
                 new ObjectMapper().readValue(res.getBody(), VaccineSlotsResponseEntity.class);
             EmailEntity emailEntity = new EmailEntity();
             emailEntity.setTo_address(email);
             emailEntity.setSubject("Vaccine slot available at PIN Code " + toPin);
-            System.out.println("Checking for URL: " + url);
             boolean isAvailable = false;
             StringBuilder sb = new StringBuilder();
             sb.append("Dear User,");
@@ -98,38 +96,28 @@ class NotifySlotsService {
                   minAge = s.getMin_age_limit();
                   availableDoses1 = s.getAvailable_capacity_dose1();
                   availableDoses2 = s.getAvailable_capacity_dose2();
-                  if (minAge == age) {
-                    System.out.println("Center Id: " + c.getCenter_id());
-                    System.out.println("Age: " + minAge);
-                    System.out.println("Date & Time: " + new Date());
-                    System.out.println("Available Dose1 Capacity: " + availableDoses1);
-                    if (availableDoses1 > 0) {
-                      isAvailable = true;
-                      System.out.println("Dose 1 is available at " + c.getName());
-                      sb.append(" Vaccine: " + s.getVaccine());
-                      sb.append(" available for age " + age + " +");
-                      sb.append(" Total: " + s.getAvailable_capacity());
-                      sb.append(" Dose1: " + availableDoses1);
-                      sb.append(" Dose2: " + availableDoses2);
-                      sb.append(" at " + c.getName());
-                      sb.append(" on Date " + s.getDate());
-                      sb.append("........");
-                    }
+                  if (minAge == age && availableDoses1 > 0) {
+                    isAvailable = true;
+                    sb.append(" Vaccine: " + s.getVaccine());
+                    sb.append(" available for age " + age + " +");
+                    sb.append(" Total: " + s.getAvailable_capacity());
+                    sb.append(" Dose1: " + availableDoses1);
+                    sb.append(" Dose2: " + availableDoses2);
+                    sb.append(" at " + c.getName());
+                    sb.append(" on Date " + s.getDate());
+                    sb.append("........");
                   }
                 }
               }
-              if (isAvailable) {
-                sb.append(" Visit https://www.cowin.gov.in/ to book the appointment!!!");
-                emailEntity.setBody(sb.toString());
-                try {
-                  System.out.println("Sending Email......!!!");
-                  sendmail(emailEntity);
-                  isEmailSent = true;
-                } catch (MessagingException e) {
-                  e.printStackTrace();
-                } catch (IOException e) {
-                  e.printStackTrace();
-                }
+            }
+            if (isAvailable) {
+              sb.append(" Visit https://selfregistration.cowin.gov.in/ to book the appointment!!!");
+              emailEntity.setBody(sb.toString());
+              try {
+                sendmail(emailEntity);
+                isEmailSent = true;
+              } catch (MessagingException | IOException e) {
+                e.printStackTrace();
               }
             }
           }
@@ -137,11 +125,11 @@ class NotifySlotsService {
           e.printStackTrace();
         }
         try {
-          System.out.println("isEmailSent: " + isEmailSent);
           if (isEmailSent) {
             Thread.sleep(10800000);
           } else {
             Thread.sleep(300000);
+            //Thread.sleep(1000);
           }
         } catch (InterruptedException e) {
         }
@@ -178,7 +166,6 @@ class NotifySlotsService {
 
     msg.setRecipients(Message.RecipientType.TO, InternetAddress.parse(emailEntity.getTo_address()));
     msg.setSubject(emailEntity.getSubject());
-    msg.setContent(emailEntity.getBody(), "text/html");
     msg.setSentDate(new Date());
 
     MimeBodyPart messageBodyPart = new MimeBodyPart();
@@ -188,12 +175,13 @@ class NotifySlotsService {
     multipart.addBodyPart(messageBodyPart);
 
     MimeBodyPart attachPart = new MimeBodyPart();
-    attachPart.attachFile("D:\\My data\\Code\\covid19vaccine\\emailImage.jpg");
+    attachPart.attachFile(
+        "D:\\My data\\Code\\Covid19VaccineSlotNotifier\\Covid19VaccineSlotNotifier" +
+            "\\covid19vaccine_backend\\emailImage.jpg");
 
     multipart.addBodyPart(attachPart);
     msg.setContent(multipart);
     //Send the email
     Transport.send(msg);
-    System.out.println("Email Sent!!!");
   }
 }
